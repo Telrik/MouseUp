@@ -1,0 +1,18 @@
+pub const SHAPES: [&str; 16] = [
+    "Arrow",
+    "Circle",
+    "Cross",
+    "CrossX",
+    "Pointer",
+    "Sword",
+    "Shield",
+    "Heart",
+    "Flame",
+    "Gear",
+    "Wand",
+    "Hand",
+    "Bow",
+    "Potion",
+    "Skull",
+    "Magnifier",
+];
