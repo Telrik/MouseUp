@@ -520,68 +520,72 @@ mod app {
             let color = color.to_owned();
             ui.label(RichText::new("SHAPE").size(11.).strong().color(MUTED));
             ui.add_space(2.);
-            ui.horizontal_wrapped(|ui| {
-                for item in SHAPES {
-                    let id = cursor_id(item, &color);
-                    let selected = item == shape;
-                    let available = cfg.library.contains(&id);
-                    let (rect, response) =
-                        ui.allocate_exact_size(Vec2::new(64., 78.), egui::Sense::click());
-                    ui.painter().rect_filled(
-                        rect,
-                        10.,
-                        if selected {
-                            Color32::from_rgb(62, 45, 99)
-                        } else {
-                            CARD
-                        },
-                    );
-                    ui.painter().rect_stroke(
-                        rect,
-                        10.,
-                        Stroke::new(
-                            1.0_f32,
+            let card_width = ((ui.available_width() - 48.) / 8.).clamp(52., 64.);
+            ui.scope(|ui| {
+                ui.spacing_mut().item_spacing.x = 6.;
+                ui.horizontal_wrapped(|ui| {
+                    for item in SHAPES {
+                        let id = cursor_id(item, &color);
+                        let selected = item == shape;
+                        let available = cfg.library.contains(&id);
+                        let (rect, response) = ui
+                            .allocate_exact_size(Vec2::new(card_width, 78.), egui::Sense::click());
+                        ui.painter().rect_filled(
+                            rect,
+                            10.,
                             if selected {
-                                PURPLE
+                                Color32::from_rgb(62, 45, 99)
                             } else {
-                                Color32::from_rgb(49, 41, 69)
+                                CARD
                             },
-                        ),
-                        egui::StrokeKind::Inside,
-                    );
-                    if available && !self.previews.contains_key(&id) {
-                        if let Some(image) =
-                            overlay::preview(&backend::cursor_path(&id, &self.bin), 48)
-                        {
-                            self.previews.insert(
-                                id.clone(),
-                                ctx.load_texture(&id, image, egui::TextureOptions::LINEAR),
+                        );
+                        ui.painter().rect_stroke(
+                            rect,
+                            10.,
+                            Stroke::new(
+                                1.0_f32,
+                                if selected {
+                                    PURPLE
+                                } else {
+                                    Color32::from_rgb(49, 41, 69)
+                                },
+                            ),
+                            egui::StrokeKind::Inside,
+                        );
+                        if available && !self.previews.contains_key(&id) {
+                            if let Some(image) =
+                                overlay::preview(&backend::cursor_path(&id, &self.bin), 48)
+                            {
+                                self.previews.insert(
+                                    id.clone(),
+                                    ctx.load_texture(&id, image, egui::TextureOptions::LINEAR),
+                                );
+                            }
+                        }
+                        if let Some(image) = self.previews.get(&id) {
+                            let r = egui::Rect::from_center_size(
+                                rect.center_top() + Vec2::new(0., 30.),
+                                Vec2::splat(46.),
+                            );
+                            ui.painter().image(
+                                image.id(),
+                                r,
+                                egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1., 1.)),
+                                Color32::WHITE,
                             );
                         }
-                    }
-                    if let Some(image) = self.previews.get(&id) {
-                        let r = egui::Rect::from_center_size(
-                            rect.center_top() + Vec2::new(0., 30.),
-                            Vec2::splat(46.),
+                        ui.painter().text(
+                            rect.center_bottom() - Vec2::new(0., 13.),
+                            egui::Align2::CENTER_CENTER,
+                            item,
+                            egui::FontId::proportional(11.),
+                            if available { Color32::WHITE } else { MUTED },
                         );
-                        ui.painter().image(
-                            image.id(),
-                            r,
-                            egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1., 1.)),
-                            Color32::WHITE,
-                        );
+                        if available && response.clicked() {
+                            cfg.select_cursor(&id);
+                        }
                     }
-                    ui.painter().text(
-                        rect.center_bottom() - Vec2::new(0., 13.),
-                        egui::Align2::CENTER_CENTER,
-                        item,
-                        egui::FontId::proportional(11.),
-                        if available { Color32::WHITE } else { MUTED },
-                    );
-                    if available && response.clicked() {
-                        cfg.select_cursor(&id);
-                    }
-                }
+                });
             });
             ui.add_space(18.);
             ui.horizontal(|ui| {
@@ -967,8 +971,11 @@ mod app {
             let mut c = Config::default();
             init_library(&root, &mut c);
             assert_eq!(c.library.len(), SHAPES.len() * COLORS.len());
-            for id in &c.library {
-                let path = backend::cursor_path(id, &root);
+            for id in c.library.clone() {
+                assert!(c.select_cursor(&id));
+                assert_eq!(c.preferred_cursor, id);
+                assert_eq!(c.app_profile("test.exe").unwrap().cursor, id);
+                let path = backend::cursor_path(&id, &root);
                 backend::validate_cursor(&path).unwrap();
                 assert!(overlay::preview(&path, 64).is_some());
             }
