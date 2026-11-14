@@ -753,7 +753,7 @@ mod app {
                             color,
                         );
                         let origin =
-                            egui::pos2(response.rect.left() + 12., response.rect.center().y - 7.);
+                            egui::pos2(response.rect.left() + 12., response.rect.center().y - 5.);
                         let stroke = Stroke::new(1.3_f32, color);
                         match page {
                             Page::Cursor => {
@@ -932,6 +932,7 @@ mod app {
             viewport: egui::ViewportBuilder::default()
                 .with_inner_size([780., 560.])
                 .with_min_inner_size([710., 500.])
+                .with_maximize_button(false)
                 .with_icon(
                     eframe::icon_data::from_png_bytes(include_bytes!("../assets/brand.png"))
                         .expect("valid application icon"),
