@@ -181,6 +181,7 @@ mod app {
         tray_thread: Option<thread::JoinHandle<()>>,
         tray_ready: bool,
         hidden: bool,
+        quitting: bool,
     }
     impl Drop for App {
         fn drop(&mut self) {
@@ -288,6 +289,7 @@ mod app {
                 tray_thread: Some(tray_thread),
                 tray_ready: false,
                 hidden: false,
+                quitting: false,
             }
         }
         fn heading(ui: &mut egui::Ui, title: &str, subtitle: &str) {
@@ -678,8 +680,16 @@ mod app {
                         ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
                         ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
                     }
-                    tray::Event::Quit => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
+                    tray::Event::Quit => {
+                        self.quitting = true;
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
                 }
+            }
+            if self.tray_ready && !self.quitting && ctx.input(|i| i.viewport().close_requested()) {
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                self.hidden = true;
+                ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
             }
             if self.tray_ready
                 && !self.hidden
@@ -845,9 +855,11 @@ mod app {
                                     ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
                                 }
                                 ui.label(
-                                    RichText::new("Minimize to tray; click its icon to reopen.")
-                                        .color(MUTED)
-                                        .small(),
+                                    RichText::new(
+                                        "Minimize or close to tray; click its icon to reopen.",
+                                    )
+                                    .color(MUTED)
+                                    .small(),
                                 );
                                 ui.add_space(12.);
                                 ui.label(RichText::new("HOTKEYS").color(MUTED).size(11.).strong());

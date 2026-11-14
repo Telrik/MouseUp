@@ -17,7 +17,7 @@ MouseUp is a free, open-source alternative to YoloMouse, written in Rust for Win
 | `Ctrl+Alt+D` | Restore the original cursor for the active app |
 | `Ctrl+Alt+Y` | Pause / resume MouseUp |
 
-Minimize to hide the window in the notification area. Click the tray icon to reopen it; right-click the icon to exit. Cursor settings are stored in `%APPDATA%\MouseUp`.
+Minimize or close the window to hide it in the notification area. Click the tray icon to reopen it; right-click the icon and choose **Exit MouseUp** to quit. Cursor settings are stored in `%APPDATA%\MouseUp`.
 
 ## Build
 
