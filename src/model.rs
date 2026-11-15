@@ -4,6 +4,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
+fn same_executable(left: &str, right: &str) -> bool {
+    if cfg!(windows) {
+        left.eq_ignore_ascii_case(right)
+    } else {
+        left == right
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Profile {
@@ -90,7 +98,7 @@ impl Config {
         let selected = self
             .profiles
             .iter()
-            .find(|p| p.executable.eq_ignore_ascii_case(executable));
+            .find(|p| same_executable(&p.executable, executable));
         if selected.is_some_and(|p| p.cursor == "@original") {
             return None;
         }
@@ -111,7 +119,7 @@ impl Config {
         if let Some(profile) = self
             .profiles
             .iter_mut()
-            .find(|p| p.executable.eq_ignore_ascii_case(executable))
+            .find(|p| same_executable(&p.executable, executable))
         {
             profile.cursor = cursor.into();
         } else {
@@ -139,7 +147,7 @@ impl Config {
             if before
                 .profiles
                 .iter()
-                .find(|p| p.executable.eq_ignore_ascii_case(&profile.executable))
+                .find(|p| same_executable(&p.executable, &profile.executable))
                 .is_some_and(|p| p.cursor != profile.cursor)
             {
                 self.set_app_cursor(&profile.executable, &profile.cursor);
@@ -163,6 +171,15 @@ impl Config {
     }
 }
 pub fn data_dir() -> io::Result<PathBuf> {
+    #[cfg(target_os = "linux")]
+    {
+        let base = std::env::var_os("XDG_CONFIG_HOME")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|p| PathBuf::from(p).join(".config")))
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"))?;
+        return Ok(base.join("MouseUp"));
+    }
+    #[cfg(not(target_os = "linux"))]
     std::env::var_os("APPDATA")
         .map(|s| PathBuf::from(s).join("MouseUp"))
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "APPDATA is not set"))
@@ -243,14 +260,20 @@ mod tests {
             size: 32,
         });
         assert!(c.select_cursor("chosen.cur"));
-        assert_eq!(c.app_profile("GAME.exe").unwrap().cursor, "first.cur");
+        assert_eq!(c.app_profile("game.exe").unwrap().cursor, "first.cur");
         assert_eq!(c.app_profile("other.exe").unwrap().cursor, "chosen.cur");
         c.set_app_cursor("game.exe", "@original");
-        assert!(c.app_profile("GAME.exe").is_none());
-        c.set_app_cursor("GAME.exe", "@global");
+        assert!(c.app_profile("game.exe").is_none());
+        c.set_app_cursor("game.exe", "@global");
         assert_eq!(c.profiles.len(), 1);
         assert_eq!(c.app_profile("game.exe").unwrap().cursor, "chosen.cur");
         assert!(!c.select_cursor("missing.cur"));
+    }
+
+    #[test]
+    fn executable_matching_follows_the_platform() {
+        assert_eq!(same_executable("/games/Test", "/games/test"), cfg!(windows));
+        assert!(same_executable("/games/Test", "/games/Test"));
     }
 
     #[test]

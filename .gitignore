@@ -1,4 +1,6 @@
 /target/
+/linux/target/
+/mouseup-*.deb
 /.analysis/
 /YoloMouse.msi
 

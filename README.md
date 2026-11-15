@@ -4,6 +4,8 @@ A free, open-source YoloMouse alternative for Windows, written in Rust. Choose a
 
 **[Download MouseUp for Windows](https://github.com/Telrik/MouseUp/releases/latest)** · [Build from source](docs/build.md)
 
+Ubuntu X11 support is available separately as an **experimental beta**: [Ubuntu beta release](https://github.com/Telrik/MouseUp/releases/tag/ubuntu-x11-v0.2.0-beta.1) · [Linux build instructions](linux/README.md).
+
 <img src="docs/screenshots/cursor.png" alt="MouseUp cursor picker" width="49%"> <img src="docs/screenshots/settings.png" alt="MouseUp settings" width="49%">
 
 - 16 cursor shapes, 12 colors and adjustable size.

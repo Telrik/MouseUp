@@ -1,0 +1,32 @@
+[workspace]
+
+[package]
+name = "mouseup-linux"
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+description = "MouseUp for X11"
+build = "build.rs"
+
+[dependencies]
+eframe = { version = "0.32", default-features = false, features = ["default_fonts", "glow", "x11"] }
+flate2 = "1"
+image = { version = "0.25", default-features = false, features = ["ico", "png", "bmp"] }
+ksni = { version = "0.3", features = ["blocking"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+x11rb = { version = "0.13", features = ["xfixes", "shape"] }
+
+[build-dependencies]
+flate2 = "1"
+
+[profile.dev.build-override]
+opt-level = 2
+
+[profile.release]
+lto = true
+strip = true
+codegen-units = 1
+
+[profile.release.build-override]
+opt-level = 2
