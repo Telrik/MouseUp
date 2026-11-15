@@ -1,0 +1,3 @@
+The selected cursor files were extracted from a user-supplied YoloMouse 1.25 MSI.
+YoloMouse cursor artwork is third-party material and is not covered by MouseUp's
+MIT license. Permission to redistribute this artwork has not been established.

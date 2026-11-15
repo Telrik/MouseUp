@@ -4,7 +4,7 @@ $root = Split-Path -Parent $PSScriptRoot
 Push-Location $root
 try {
     if (-not (Test-Path -LiteralPath 'assets\yolomouse\Cursors\Arrow\Blue.cur')) {
-        throw 'Original cursor files are missing. Run scripts\extract-cursors.ps1 with your YoloMouse MSI first.'
+        throw 'Cursor files are missing from assets\yolomouse\Cursors.'
     }
     foreach ($target in @('x86_64-pc-windows-msvc','i686-pc-windows-msvc')) {
         cargo build --release --target $target -p mouseup-hook -p mouseup-hook-host

@@ -3,4 +3,25 @@
 /YoloMouse.msi
 
 /dist*/
-/assets/yolomouse/
+/assets/yolomouse/*
+!/assets/yolomouse/NOTICE.txt
+!/assets/yolomouse/Cursors/
+/assets/yolomouse/Cursors/*
+!/assets/yolomouse/Cursors/Arrow/
+!/assets/yolomouse/Cursors/Circle/
+!/assets/yolomouse/Cursors/Cross/
+!/assets/yolomouse/Cursors/CrossX/
+!/assets/yolomouse/Cursors/Pointer/
+!/assets/yolomouse/Cursors/Sword/
+!/assets/yolomouse/Cursors/Shield/
+!/assets/yolomouse/Cursors/Heart/
+!/assets/yolomouse/Cursors/Flame/
+!/assets/yolomouse/Cursors/Gear/
+!/assets/yolomouse/Cursors/Wand/
+!/assets/yolomouse/Cursors/Hand/
+!/assets/yolomouse/Cursors/Bow/
+!/assets/yolomouse/Cursors/Potion/
+!/assets/yolomouse/Cursors/Skull/
+!/assets/yolomouse/Cursors/Magnifier/
+/assets/yolomouse/Cursors/*/*
+!/assets/yolomouse/Cursors/*/*.cur
