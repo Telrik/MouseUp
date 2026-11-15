@@ -2,6 +2,8 @@
 
 Windows x64, Git, Rust stable, the Microsoft C++ build tools and the Windows SDK are required. The selected cursor files are included in the repository; no YoloMouse installer is needed.
 
+Open **x64 Native Tools Command Prompt for Visual Studio**, run `powershell`, and then run:
+
 ```powershell
 git clone https://github.com/Telrik/MouseUp.git
 cd MouseUp
