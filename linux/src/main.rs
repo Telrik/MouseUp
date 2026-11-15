@@ -1,10 +1,21 @@
+#[cfg(target_os = "linux")]
+mod backend;
+#[cfg(target_os = "macos")]
+#[path = "../../macos/src/backend.rs"]
 mod backend;
 #[path = "../../src/catalog.rs"]
 mod catalog;
 mod cursor;
 #[path = "../../src/model.rs"]
 mod model;
+#[cfg(target_os = "linux")]
 mod tray;
+#[cfg(target_os = "macos")]
+#[path = "../../macos/src/tray.rs"]
+mod tray;
+#[cfg(target_os = "macos")]
+#[path = "../../macos/src/platform.rs"]
+mod platform;
 
 use eframe::egui::{self, Color32, RichText, Stroke, Vec2};
 use std::{
@@ -52,6 +63,10 @@ struct App {
     tray_ready: bool,
     hidden: bool,
     quitting: bool,
+    #[cfg(target_os = "macos")]
+    mac: Option<platform::Mac>,
+    #[cfg(target_os = "macos")]
+    overlay: HashMap<String, (egui::TextureHandle, (u16, u16))>,
     config_path: PathBuf,
     previews: HashMap<String, egui::TextureHandle>,
     page: Page,
@@ -71,6 +86,44 @@ impl Drop for App {
 }
 
 impl App {
+    #[cfg(target_os = "macos")]
+    fn show_mac_overlay(&mut self, ctx: &egui::Context) {
+        let (config, pointer) = {
+            let state = self.shared.lock().unwrap();
+            (state.config.clone(), state.pointer)
+        };
+        let Some(pointer) = pointer else { return; };
+        let frontmost = backend::frontmost_app();
+        let profile = frontmost.as_deref().map(|p| config.app_profile(p)).unwrap_or_else(|| config.app_profile(""));
+        let Some(profile) = profile else { return; };
+        let key = format!("{}:{}", profile.cursor, profile.size);
+        if !self.overlay.contains_key(&key) {
+            let Ok((image, hotspot)) = cursor::decode(&profile.cursor, profile.size) else { return; };
+            let size = profile.size as usize;
+            let pixels = image.into_raw();
+            let texture = ctx.load_texture(&key, egui::ColorImage::from_rgba_unmultiplied([size, size], &pixels), egui::TextureOptions::LINEAR);
+            self.overlay.insert(key.clone(), (texture, hotspot));
+        }
+        let Some((texture, hotspot)) = self.overlay.get(&key).cloned() else { return; };
+        let size = profile.size as f32;
+        let builder = egui::ViewportBuilder::default()
+            .with_title("MouseUp cursor")
+            .with_inner_size([size, size])
+            .with_position(egui::pos2(pointer[0] - hotspot.0 as f32, pointer[1] - hotspot.1 as f32))
+            .with_transparent(true)
+            .with_decorations(false)
+            .with_has_shadow(false)
+            .with_resizable(false)
+            .with_active(false)
+            .with_always_on_top()
+            .with_mouse_passthrough(true);
+        ctx.show_viewport_deferred(egui::ViewportId::from_hash_of("mouseup-cursor"), builder, move |ctx, _| {
+            egui::CentralPanel::default().frame(egui::Frame::new().fill(Color32::TRANSPARENT).inner_margin(0)).show(ctx, |ui| {
+                ui.painter().image(texture.id(), ui.max_rect(), egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1., 1.)), Color32::WHITE);
+            });
+        });
+    }
+
     fn new(cc: &eframe::CreationContext<'_>, config_path: PathBuf) -> Self {
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
         let mut style = (*cc.egui_ctx.style()).clone();
@@ -101,10 +154,12 @@ impl App {
         }
         let shared = Arc::new(Mutex::new(backend::Shared {
             config,
-            status: "Starting X11".into(),
+            status: if cfg!(target_os = "macos") { "Starting macOS overlay" } else { "Starting X11" }.into(),
             active: false,
             hotkeys: true,
             current_app: None,
+            #[cfg(target_os = "macos")]
+            pointer: None,
         }));
         let alive = Arc::new(AtomicBool::new(true));
         let (tray_rx, tray_worker) = tray::start(cc.egui_ctx.clone(), alive.clone());
@@ -123,6 +178,10 @@ impl App {
             tray_ready: false,
             hidden: false,
             quitting: false,
+            #[cfg(target_os = "macos")]
+            mac: None,
+            #[cfg(target_os = "macos")]
+            overlay: HashMap::new(),
             config_path,
             previews: HashMap::new(),
             page: Page::Cursor,
@@ -334,6 +393,12 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _: &mut eframe::Frame) {
+        #[cfg(target_os = "macos")]
+        {
+            if self.mac.is_none() { self.mac = Some(platform::Mac::new(ctx)); }
+            if let Some(mac) = &mut self.mac { mac.poll(&self.shared, &self.config_path); }
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
+        }
         let mut reopened = false;
         while let Ok(event) = self.tray_rx.try_recv() {
             match event {
@@ -424,7 +489,7 @@ impl eframe::App for App {
                     Page::Cursor => self.cursors(ui, ctx, &mut config, &status),
                     Page::Applications => self.applications(ui, &mut config),
                     Page::Settings => {
-                        Self::heading(ui, "Settings", "MouseUp for X11");
+                        Self::heading(ui, "Settings", if cfg!(target_os = "macos") { "MouseUp for macOS" } else { "MouseUp for X11" });
                         ui.label("Ctrl+Alt+1 / 2 — change the active application's cursor");
                         ui.label("Ctrl+Alt+D — restore the active application's cursor");
                         ui.label("Ctrl+Alt+Y — pause or resume");
@@ -451,7 +516,7 @@ impl eframe::App for App {
                         }
                         ui.label(
                             RichText::new(
-                                "Games that draw their own cursor may still show it underneath.",
+                                if cfg!(target_os = "macos") { "The system cursor and game-drawn cursors may remain visible beneath the overlay." } else { "Games that draw their own cursor may still show it underneath." },
                             )
                             .color(MUTED),
                         );
@@ -467,10 +532,16 @@ impl eframe::App for App {
                 self.error.clear();
             }
         }
+        #[cfg(target_os = "macos")]
+        self.show_mac_overlay(ctx);
     }
+
+    #[cfg(target_os = "macos")]
+    fn clear_color(&self, _: &egui::Visuals) -> [f32; 4] { [0., 0., 0., 0.] }
 }
 
 fn main() {
+    #[cfg(target_os = "linux")]
     if std::env::var_os("DISPLAY").is_none() {
         eprintln!("MouseUp requires an X11 display. Sign in to an X11 session and try again.");
         std::process::exit(1);

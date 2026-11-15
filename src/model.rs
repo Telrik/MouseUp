@@ -179,7 +179,13 @@ pub fn data_dir() -> io::Result<PathBuf> {
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"))?;
         return Ok(base.join("MouseUp"));
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(target_os = "macos")]
+    {
+        return std::env::var_os("HOME")
+            .map(|p| PathBuf::from(p).join("Library/Application Support/MouseUp"))
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"));
+    }
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     std::env::var_os("APPDATA")
         .map(|s| PathBuf::from(s).join("MouseUp"))
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "APPDATA is not set"))
